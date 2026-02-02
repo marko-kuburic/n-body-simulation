@@ -1,0 +1,25 @@
+# Build and LaTeX artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+report.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Benchmark results (large, generated)
+results/
+results_comparison_*/
+figures/
+
+# Logs
+*.log
+missfont.log
+
+# OS files
+.DS_Store

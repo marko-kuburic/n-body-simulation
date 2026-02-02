@@ -1,0 +1,100 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    BENCHMARKING SUITE - QUICK SUMMARY                     ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+📦 WHAT YOU HAVE
+═══════════════════════════════════════════════════════════════════════════
+
+A complete, publication-ready HPC benchmarking suite that:
+  • Runs rigorous CPU & GPU performance experiments
+  • Automatically selects best implementations
+  • Generates publication-ready plots (PNG + SVG)
+  • Produces CSV data and human-readable summaries
+  • Captures full system metadata for reproducibility
+
+🚀 QUICK START
+═══════════════════════════════════════════════════════════════════════════
+
+1. Install dependencies:
+   $ pip3 install numpy matplotlib
+
+2. Run everything (30-60 min):
+   $ bash bench/run_all_benchmarks.sh
+
+3. View results:
+   $ cat results/*/summary.txt
+   $ ls results/*/plots/
+
+That's it! 🎉
+
+📚 DOCUMENTATION
+═══════════════════════════════════════════════════════════════════════════
+
+  BENCHMARKING.md         ← Start here (overview)
+  bench/QUICKSTART.md     ← Quick reference
+  bench/README.md         ← Complete manual
+  bench/CHECKLIST.md      ← Step-by-step guide
+  bench/STATUS.txt        ← Detailed status report
+
+📊 OUTPUTS
+═══════════════════════════════════════════════════════════════════════════
+
+Every run creates: results/YYYYMMDD_HHMMSS/
+  • summary.txt                    Human-readable findings
+  • final_summary_median.csv       Performance data
+  • selected_*_variants.json       Best implementations
+  • plots/*.png, *.svg             Publication-ready figures
+  • *_metadata.json                System specs
+  • *.log files                    Raw data (100+ files)
+
+🔬 METHODOLOGY
+═══════════════════════════════════════════════════════════════════════════
+
+  ✓ Warmup + 5-7 repeats per config
+  ✓ Median statistics (robust to outliers)
+  ✓ Automatic variant selection at N=6000
+  ✓ Full system metadata capture
+  ✓ Publication-ready outputs
+
+📈 EXPERIMENTS
+═══════════════════════════════════════════════════════════════════════════
+
+1. CPU Baseline: Strong scaling, size sweep, timestep sweep
+2. CUDA: All GPU variants across problem sizes
+3. Final: Head-to-head comparison of best implementations
+
+✅ VALIDATION
+═══════════════════════════════════════════════════════════════════════════
+
+Test the suite:
+  $ python3 bench/test_parsing.py
+  # Should output: ✓ ALL TESTS PASSED
+
+🎓 FOR RESEARCH
+═══════════════════════════════════════════════════════════════════════════
+
+This suite generates everything needed for a paper:
+  • Methods: Documented methodology
+  • Results: CSV tables + SVG figures  
+  • Reproducibility: Full metadata
+  • LaTeX-ready outputs
+
+🆘 HELP
+═══════════════════════════════════════════════════════════════════════════
+
+Issue: "Permission denied"
+→ chmod +x bench/*.sh
+
+Issue: "Module not found"
+→ pip3 install numpy matplotlib
+
+Issue: Long runtime
+→ Edit scripts: reduce REPEATS and SIZES
+
+More help: See bench/README.md or bench/QUICKSTART.md
+
+═══════════════════════════════════════════════════════════════════════════
+
+Ready to benchmark? → bash bench/run_all_benchmarks.sh
+
+═══════════════════════════════════════════════════════════════════════════
