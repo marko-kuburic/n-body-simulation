@@ -277,123 +277,90 @@ OpenMP symmetric vs non-sym:     0.02x (slower)
 - OpenMP symmetric is **41x slower** than non-symmetric due to massive atomic contention
 - This demonstrates: **minimizing synchronization is critical for parallel performance**
 
-## Automated Benchmarking
+## Automated Benchmarking (Updated Suite)
 
-### CPU Benchmarks
-Run comprehensive CPU performance analysis:
+All benchmarking and plotting is centralized in the [bench/](bench/README.md) suite. It follows a reproducible methodology (warmup + median of repeats, controlled OpenMP affinity, and automatic variant selection).
+
+### Full Pipeline (CPU + GPU + Final Comparison)
 ```bash
-./benchmark_rigorous.sh results_cpu.txt
-python3 analyze_benchmark.py results_cpu.txt
+bash bench/run_all_benchmarks.sh
 ```
 
-Generates CSV files:
-- `strong_scaling.csv` - Thread scaling analysis
-- `problem_size_scaling.csv` - N² complexity verification  
-- `timestep_scaling.csv` - Temporal linearity check
+This runs:
+1. CPU baseline (strong scaling, size sweep, timestep sweep)
+2. CUDA benchmarks (all available variants)
+3. Final head-to-head comparison
+4. Parsing + plots (PNG + SVG)
 
-See [BENCHMARKING.md](BENCHMARKING.md) for methodology details.
+Results are saved to results/YYYYMMDD_HHMMSS/ with:
+- summary_median.csv / cuda_summary_median.csv / final_summary_median.csv
+- selected_cpu_variants.json / selected_cuda_variant.json
+- plots/ (publication-ready figures)
 
-### GPU Benchmarks
-Run CUDA performance analysis:
+### Run Individual Phases
 ```bash
-./benchmark_cuda.sh results_cuda_<timestamp>
-python3 analyze_benchmark_extended.py results_cuda_*/*.log --cuda
+# CPU only
+bash bench/run_cpu_baseline.sh
+python3 bench/parse_and_plot.py results/<timestamp>/
+
+# CUDA only
+bash bench/run_cuda_all.sh
+python3 bench/parse_and_plot.py results/<timestamp>/
+
+# Final comparison (after CPU+CUDA)
+bash bench/run_final_comparison.sh
+python3 bench/parse_and_plot.py results/<timestamp>/ --final
 ```
 
-Generates CSV files:
-- `cuda_problem_size.csv` - GPU scaling and kernel comparison
-- `cuda_timestep_scaling.csv` - Temporal scaling
-- `cuda_kernel_comparison.csv` - Naive vs tiled analysis
-
-See [GPU_BENCHMARKING.md](GPU_BENCHMARKING.md) for GPU-specific methodology.
-
-### Unified Pipeline (CPU + GPU + Plots)
-Run everything and generate publication-ready figures:
+### Quick CPU vs GPU Comparison (Term Paper)
+For a fast, aligned CPU/GPU comparison with matching problem sizes:
 ```bash
-./run_benchmark_all.sh --both
+./benchmark_comparison.sh
+python3 parse_comparison.py results_comparison_<timestamp>/
+python3 plot_comparison.py results_comparison_<timestamp>/
 ```
 
-This will:
-1. Build CPU and CUDA binaries
-2. Run comprehensive benchmarks for both
-3. Parse all logs into CSV files
-4. Generate matplotlib plots in `results_<timestamp>/figures/`
+This generates summary tables and 5 publication-ready figures in results_comparison_<timestamp>/plots/.
 
-Output figures:
-- `cpu_strong_scaling.png` - Thread speedup and efficiency
-- `cpu_problem_size_scaling.png` - Time and GFlops vs N
-- `cuda_problem_size_scaling.png` - GPU kernel analysis
-- `cuda_transfer_overhead.png` - Kernel vs total time
-- `cpu_vs_gpu_comparison.png` - Heterogeneous performance
-
-### Plotting Only
-If you already have CSV files:
+### Dependencies
 ```bash
-python3 plot_results.py --output-dir=figures
+pip3 install numpy matplotlib
 ```
 
-Requires: `pip3 install matplotlib`
+See [BENCHMARKING.md](BENCHMARKING.md) and [bench/README.md](bench/README.md) for methodology details and configuration options.
 
-## Benchmark Results (CPU)
+## Latest Benchmark Results (2026-02-02)
 
-The following results were obtained on a 32-core CPU system using the automated benchmark suite.
+The newest results are from the full benchmark pipeline and final comparison run in:
+- results/20260202_131941/ (CPU baseline)
+- results/20260202_134404/ (CUDA, Docker)
+- results/comparison_20260202_140100/ (CPU vs GPU comparison)
 
-### Strong Scaling Analysis (2000 particles, 10 timesteps)
+### Test System
+- CPU: 13th Gen Intel(R) Core(TM) i9-13900HX (32 threads)
+- GPU: NVIDIA GeForce RTX 4070 Laptop
+- OS: Linux 6.17.12 (Fedora)
+- CUDA: 12.2 (container), driver 580.119.02
 
-| Threads | Seq Non-Sym | Seq Symmetric | OMP Non-Sym | OMP Symmetric | Parallel Eff (Non-Sym) |
-|---------|-------------|---------------|-------------|---------------|------------------------|
-| 1       | 0.218s      | 0.142s (1.53x)| 0.200s      | 0.585s (0.37x)| 108.7%                |
-| 2       | 0.200s      | 0.140s (1.42x)| 0.108s      | 1.269s (0.16x)| 92.7%                 |
-| 4       | 0.258s      | 0.141s (1.84x)| 0.061s      | 2.493s (0.10x)| 106.3%                |
-| 8       | 0.220s      | 0.141s (1.56x)| 0.072s      | 1.719s (0.13x)| 38.3%                 |
-| 16      | 0.200s      | 0.141s (1.42x)| 0.046s      | 0.548s (0.37x)| 27.3%                 |
-| 32      | 0.204s      | 0.150s (1.36x)| 0.036s      | 0.293s (0.69x)| 17.6%                 |
+### CPU vs GPU (median time, seconds)
+Fixed steps=10, problem sizes N = 1K..12K, median of 5 runs.
 
-**Key Observations:**
-- Sequential symmetric provides consistent **1.36-1.84x speedup** across all thread counts
-- OpenMP non-symmetric shows excellent scaling: **4.25x** at 4 threads, **5.62x** at 32 threads
-- Parallel efficiency stays above 90% up to 4 threads, then drops due to memory bandwidth saturation
-- OpenMP symmetric is **10-50x slower** than non-symmetric at 2-8 threads
-- At 32 threads, atomic contention still dominates: **8.1x slower** than non-symmetric
+| N | CPU Seq Sym | CPU OMP Non-Sym | GPU CUDA (Docker) | Winner |
+|---|-------------|-----------------|-------------------|--------|
+| 1,000  | 0.0355 | 0.0109 | 0.0168 | CPU OMP |
+| 2,000  | 0.1419 | 0.0287 | 0.0333 | CPU OMP |
+| 4,000  | 0.5672 | 0.0848 | 0.0584 | GPU |
+| 6,000  | 1.2759 | 0.1789 | 0.0864 | GPU |
+| 8,000  | 2.2680 | 0.3136 | 0.1192 | GPU |
+| 10,000 | 3.5475 | 0.4768 | 0.2982 | GPU |
+| 12,000 | 6.2467 | 0.6870 | 0.3541 | GPU |
 
-### Problem Size Scaling (32 threads, 5 timesteps)
+**Highlights:**
+- GPU becomes fastest at $N \ge 4000$
+- At $N=6000$, GPU is ~14.8× faster than best sequential CPU and ~2.1× faster than OpenMP
+- OpenMP non-symmetric is consistently the best CPU variant for moderate and large N
 
-| Particles | Seq Non-Sym | Seq Symmetric | OMP Non-Sym | OMP Symmetric | Speedup (Non-Sym) | Par. Eff |
-|-----------|-------------|---------------|-------------|---------------|-------------------|----------|
-| 500       | 0.0070s     | 0.0044s (1.57x)| 0.0037s    | 0.0188s (0.37x)| 1.87x            | 5.8%    |
-| 1,000     | 0.0276s     | 0.0236s (1.17x)| 0.0088s    | 0.0601s (0.46x)| 3.13x            | 9.8%    |
-| 2,000     | 0.1214s     | 0.0708s (1.71x)| 0.0168s    | 0.1453s (0.84x)| 7.23x            | 22.6%   |
-| 4,000     | 0.4026s     | 0.2811s (1.43x)| 0.0454s    | 0.4324s (0.93x)| 8.86x            | 27.7%   |
-| 8,000     | 1.6279s     | 1.1228s (1.45x)| 0.1635s    | 1.3318s (1.22x)| 9.96x            | 31.1%   |
-| 16,000    | 6.3666s     | 4.6001s (1.38x)| 0.5723s    | 4.3279s (1.47x)| 11.12x           | 34.8%   |
-| 32,000    | 25.6072s    | 18.1719s (1.41x)| 2.1059s    | 14.0512s (1.82x)| 12.16x           | 38.0%   |
-
-**Key Observations:**
-- Sequential symmetric maintains **1.17-1.71x speedup** across all problem sizes
-- OpenMP non-symmetric shows improving speedup with problem size: **1.87x** (N=500) → **12.16x** (N=32K)
-- Parallel efficiency improves dramatically with N: **5.8%** (N=500) → **38.0%** (N=32K)
-- Critical crossover: At N≥8000, OpenMP symmetric becomes faster than sequential
-- At N=32000, symmetric OpenMP achieves **1.82x speedup** despite atomic overhead
-- **Lesson:** Large problems favor symmetric formulation even with synchronization cost
-
-### Timestep Invariance (4000 particles, 32 threads)
-
-| Timesteps | Seq Non-Sym | Seq Symmetric | OMP Non-Sym | OMP Symmetric | Speedup (Non-Sym) |
-|-----------|-------------|---------------|-------------|---------------|-------------------|
-| 5         | 0.3989s     | 0.2820s (1.41x)| 0.0487s    | 0.4422s (0.90x)| 8.19x            |
-| 10        | 0.8002s     | 0.5620s (1.42x)| 0.1084s    | 0.8694s (0.92x)| 7.38x            |
-| 20        | 1.5993s     | 1.1238s (1.42x)| 0.1995s    | 1.7293s (0.92x)| 8.02x            |
-| 40        | 3.1872s     | 2.2454s (1.42x)| 0.3859s    | 3.4202s (0.93x)| 8.26x            |
-| 80        | 6.3702s     | 4.5097s (1.41x)| 0.7868s    | 6.8794s (0.93x)| 8.10x            |
-| 160       | 12.7187s    | 9.1701s (1.39x)| 1.7773s    | 13.7135s (0.93x)| 7.16x            |
-| 320       | 25.5739s    | 18.0370s (1.42x)| 2.7344s    | 27.415s (0.93x)| 9.35x            |
-
-**Key Observations:**
-- All speedups are **independent of timestep count** (expected: timesteps are perfectly sequential)
-- Sequential symmetric consistently **1.39-1.42x faster** (arithmetic advantage stable)
-- OpenMP non-symmetric achieves **7-9x speedup** across all timestep counts
-- OpenMP symmetric remains **0.90-0.93x** (still losing despite large problem size)
-- **Insight:** Synchronization overhead per timestep remains constant; total overhead scales with time
+For full CSVs and plots, see results/comparison_20260202_140100/ and results/20260202_131941/.
 
 ### Critical Analysis
 
